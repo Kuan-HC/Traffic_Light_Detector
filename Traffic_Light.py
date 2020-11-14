@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
-# PIL for visualization
 from PIL import Image
+# for visualization
+import matplotlib.pyplot as plt
 from PIL import ImageDraw
 from PIL import ImageColor
 
@@ -70,7 +70,7 @@ class TLClassifier(object):
             '''
             Below if for debugging
             '''            
-            confidence_cutoff = 0.8
+            confidence_cutoff = 0.7    # was 0.8
             # Filter boxes with a confidence score less than `confidence_cutoff`
             boxes, scores, classes = self.filter_boxes(confidence_cutoff, boxes, scores, classes)
             
@@ -85,8 +85,9 @@ class TLClassifier(object):
             # Each class with be represented by a differently colored box
             self.draw_boxes(image, box_coords, classes)
             
-            plt.figure(figsize=(12, 8))
+            #plt.figure(figsize=(12, 8))
             plt.imshow(image)
+            plt.show()
         
         
         #return TrafficLight.UNKNOWN
