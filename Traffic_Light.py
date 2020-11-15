@@ -31,7 +31,7 @@ class TLClassifier(object):
                 
         return graph
     
-    def get_classification(self, img):
+    def get_classification(self, cv2_img):
         """Determines the color of the traffic light in the image
 
         Args:
@@ -44,8 +44,8 @@ class TLClassifier(object):
         #TODO implement light color prediction
         
         #image = cv2.resize(image, (300, 300))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(img)
+        cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(cv2_img)
         image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
         
         with tf.Session(graph = self.detection_graph) as sess:   
@@ -70,7 +70,7 @@ class TLClassifier(object):
             '''
             Below if for debugging
             '''            
-            confidence_cutoff = 0.7
+            confidence_cutoff = 0.6
             # Filter boxes with a confidence score less than `confidence_cutoff`
             boxes, scores, classes = self.__filter_boxes(confidence_cutoff, boxes, scores, classes)
             # The current box coordinates are normalized to a range between 0 and 1.
@@ -80,11 +80,12 @@ class TLClassifier(object):
             # Each class with be represented by a differently colored box
             # For Tuning            
             self.__draw_boxes(image, box_coords, classes)            
-            plt.imshow(image)
+            #plt.imshow(cv2_img)
             print("switch to TrafficLight.UNKNOWN in ROS")
             light_state = 4
             if len(classes)>0:
-                light_state = self.__classifier(image, box_coords, classes)
+                print("classifier")
+                light_state = self.__classifier(cv2_img, box_coords, classes)
  
         #return TrafficLight.UNKNOWN
         return light_state
@@ -131,26 +132,27 @@ class TLClassifier(object):
         predict_label = [ 0, 0, 0]
         for i in range(len(boxes)):
             if (classes[i]==10):
-                bot, left, top, right = boxes[i, ...]
-                crop_image = image.crop((left, bot, right, top))
+                bot, left, top, right = boxes[i, ...]   
+                crop_image = image[int(bot):int(top), int(left):int(right)]
+                
                 '''
                 Traffic Light classifier - project from intro to self driving cars
-                '''                
+                '''  
                 predict_single_sign = self.__estimate_label(crop_image)
                 print("single object predict: ",predict_single_sign)
                 predict_label = np.sum([predict_label, predict_single_sign],axis = 0)
         # 0:R 1:Y 2:G
         print("This groupb prediction: ",np.argmax(predict_label))
         return np.argmax(predict_label)
-                    
+                         
                 
             
     '''
     Traffic Light classifier - reuse project from intro-to-self-driving-cars
     '''
-    def __estimate_label(self, pil_image):
-        rgb_image = np.array(pil_image)      
-        rgb_image = cv2.resize(rgb_image,(32,32))
+    def __estimate_label(self, image):
+        #rgb_image = np.array(pil_image)      
+        rgb_image = cv2.resize(image,(32,32))
         test_image_hsv = cv2.cvtColor(np.array(rgb_image), cv2.COLOR_RGB2HSV)
         # Mask HSV channel
         masked_red = self.__mask_red(test_image_hsv, rgb_image)
@@ -166,7 +168,7 @@ class TLClassifier(object):
         AVG_Masked_G = self.__AVG_Brightness(Masked_G_V)
         
         # For Tuning
-        #self.__print_4_images(rgb_image, masked_red, masked_yellow, masked_green)
+        self.__print_4_images(rgb_image, masked_red, masked_yellow, masked_green)
         
         return self.__predict_one_hot(AVG_Masked_R,AVG_Masked_Y,AVG_Masked_G)
             
