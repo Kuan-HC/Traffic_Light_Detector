@@ -77,13 +77,14 @@ class TLClassifier(object):
             # Each class with be represented by a differently colored box
             # Draw Box for Tuning            
             self.__draw_boxes(image, box_coords, classes)            
-            #plt.imshow(cv2_img)
-            print("switch to TrafficLight.UNKNOWN in ROS")
+            plt.imshow(image)
+            plt.show()
+            
             light_state = 4
             if len(classes)>0:
                 light_state = self.__classifier(cv2_img, box_coords, classes)
- 
-        #return TrafficLight.UNKNOWN
+                
+        print("light_state",light_state)
         return light_state
     
     def __filter_boxes(self, min_score, boxes, scores, classes):
@@ -125,24 +126,33 @@ class TLClassifier(object):
                        (right, top), (left, top)], width=thickness, fill=color)
     
     def __classifier(self, image, boxes, classes):
-        predict_label = [ 0, 0, 0]
+        traffic_counter = 0
+        predict_sum = 0.
         for i in range(len(boxes)):
             if (classes[i]==10):
-                bot, left, top, right = boxes[i, ...]   
+                traffic_counter += 1
+                bot, left, top, right = boxes[i, ...]
                 crop_image = image[int(bot):int(top), int(left):int(right)]
-                
                 '''
                 Traffic Light classifier - project from intro to self driving cars
                 '''  
-                predict_single_sign = self.__estimate_label(crop_image)
-                print("single object predict: ",predict_single_sign)
-                predict_label = np.sum([predict_label, predict_single_sign],axis = 0)
-        # 0:R 1:Y 2:G
-        print("This groupb prediction: ",np.argmax(predict_label))
-        return np.argmax(predict_label)
-                         
-                
-            
+                predict_sum += self.__estimate_label(crop_image)    
+        # traffic_counter ==0 means there is no object detect as traffic            
+        if (traffic_counter !=0):
+            avg = predict_sum/traffic_counter
+            print("This groupb brightness value: ",avg)
+        else:
+            avg = 0        
+
+        '''
+        Traffic light definition in UNKNOWN=4
+        GREEN=2  YELLOW=1  RED=0 
+        '''
+        if (avg > 3.0):
+            return 0
+        else:
+            return 4
+                     
     '''
     Traffic Light classifier - reuse project from intro-to-self-driving-cars
     '''
@@ -150,23 +160,16 @@ class TLClassifier(object):
         rgb_image = cv2.resize(rgb_image,(32,32))
         test_image_hsv = cv2.cvtColor(np.array(rgb_image), cv2.COLOR_RGB2HSV)
         # Mask HSV channel
-        masked_red = self.__mask_red(test_image_hsv, rgb_image)
-        masked_yellow = self.__mask_yellow(test_image_hsv, rgb_image)
-        masked_green = self.__mask_green(test_image_hsv, rgb_image)
-        
-        Masked_R_V = self.__Masked_Image_Brightness(masked_red)
-        Masked_Y_V = self.__Masked_Image_Brightness(masked_yellow)
-        Masked_G_V = self.__Masked_Image_Brightness(masked_green)
-        
-        AVG_Masked_R = self.__AVG_Brightness(Masked_R_V)
-        AVG_Masked_Y = self.__AVG_Brightness(Masked_Y_V)
-        AVG_Masked_G = self.__AVG_Brightness(Masked_G_V)
-        
-        # For Tuning
-        self.__print_4_images(rgb_image, masked_red, masked_yellow, masked_green)
-        
-        return self.__predict_one_hot(AVG_Masked_R,AVG_Masked_Y,AVG_Masked_G)
-            
+        masked_red = self.__mask_red(test_image_hsv, rgb_image)   
+        Masked_R_V = self.__Masked_Image_Brightness(masked_red)  
+        AVG_Masked_R = self.__AVG_Brightness(Masked_R_V)    
+        plt.imshow(masked_red)
+        plt.show()
+        plt.imshow(Masked_R_V, cmap='gray') 
+        plt.show()
+        print("brightness avg value: %d" %AVG_Masked_R)
+        return AVG_Masked_R
+    
     def __mask_red(self, HSV_image, rgb_image):    
         #red_mask_1 = cv2.inRange(HSV_image, (0,50,60), (10,255,255))
         red_mask = cv2.inRange(HSV_image, (140,10,100), (180,255,255)) #was (140,36,100)
@@ -174,18 +177,6 @@ class TLClassifier(object):
         masked_image = np.copy(rgb_image)
         masked_image[red_mask == 0] = [0, 0, 0]
         return masked_image    
-
-    def __mask_yellow(self, HSV_image, rgb_image):
-        yellow_mask = cv2.inRange(HSV_image, (12,10,80), (30,255,255))
-        masked_image = np.copy(rgb_image)
-        masked_image[yellow_mask == 0] = [0, 0, 0]
-        return masked_image
-
-    def __mask_green(self, HSV_image, rgb_image):
-        green_mask = cv2.inRange(HSV_image, (45,35,80), (100,255,255))
-        masked_image = np.copy(rgb_image)
-        masked_image[green_mask == 0] = [0, 0, 0]
-        return masked_image
     
     def __Masked_Image_Brightness(self, image):
         masked_Image_HSV = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
@@ -196,22 +187,3 @@ class TLClassifier(object):
         height, width = image.shape
         brightness_avg = np.sum(image)/(height*width)
         return brightness_avg
-    
-    def __predict_one_hot(self, R_Bright_Avg, Y_Bright_Avg, G_Bright_Avg):
-        predict_label = [ 0, 0, 0]
-        Brightness_input = [R_Bright_Avg ,Y_Bright_Avg ,G_Bright_Avg]
-        if np.sum(Brightness_input)==0:
-            return predict_label
-        predict_label[np.argmax(Brightness_input)] = 1
-        return predict_label
-    
-    def __print_4_images(self, image_1, image_2, image_3, image_4):
-        f, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(15,10))
-        ax1.set_title('Original image')
-        ax1.imshow(image_1, cmap = 'gray')
-        ax2.set_title('Red')
-        ax2.imshow(image_2, cmap = 'gray')
-        ax3.set_title('Yellow')
-        ax3.imshow(image_3, cmap = 'gray')
-        ax4.set_title('Green')
-        ax4.imshow(image_4, cmap = 'gray')
