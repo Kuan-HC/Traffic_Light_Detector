@@ -17,6 +17,8 @@ class TLClassifier(object):
         # visualization
         cmap = ImageColor.colormap        
         self.COLOR_LIST = sorted([c for c in cmap.keys()])
+        # Creat Tensorflow session
+        self.sess = tf.Session(graph = self.detection_graph)
     
     def __load_graph(self, graph_file):
         """Loads a frozen inference graph"""
@@ -47,44 +49,42 @@ class TLClassifier(object):
         cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(cv2_img)
         image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
-        
-        with tf.Session(graph = self.detection_graph) as sess:   
-            # The input placeholder for the image. Get_tensor_by_name` returns the Tensor with the associated name in the Graph.
-            image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
-            # Each box represents a part of the image where a particular object was detected.
-            detection_boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
-            # Each score represent how level of confidence for each of the objects.
-            # Score is shown on the result image, together with the class label.
-            detection_scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
-            # The classification of the object (integer id).
-            detection_classes = self.detection_graph.get_tensor_by_name('detection_classes:0')             
-            # Actual detection.
-            (boxes, scores, classes) = sess.run([detection_boxes, detection_scores, detection_classes], 
-                                        feed_dict={image_tensor: image_np})
+         
+        # The input placeholder for the image. Get_tensor_by_name` returns the Tensor with the associated name in the Graph.
+        image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
+        # Each box represents a part of the image where a particular object was detected.
+        detection_boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
+        # Each score represent how level of confidence for each of the objects.
+        # Score is shown on the result image, together with the class label.
+        detection_scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
+        # The classification of the object (integer id).
+        detection_classes = self.detection_graph.get_tensor_by_name('detection_classes:0')             
+        # Actual detection.
+        (boxes, scores, classes) = self.sess.run([detection_boxes, detection_scores, detection_classes], 
+                                    feed_dict={image_tensor: image_np})
 
-            # Remove unnecessary dimensions
-            boxes = np.squeeze(boxes)
-            scores = np.squeeze(scores)
-            classes = np.squeeze(classes)
+        # Remove unnecessary dimensions
+        boxes = np.squeeze(boxes)
+        scores = np.squeeze(scores)
+        classes = np.squeeze(classes)
             
-            confidence_cutoff = 0.7    # was 0.8
-            # Filter boxes with a confidence score less than `confidence_cutoff`
-            boxes, scores, classes = self.__filter_boxes(confidence_cutoff, boxes, scores, classes)
-            # The current box coordinates are normalized to a range between 0 and 1.
-            # This converts the coordinates actual location on the image.
-            width, height = image.size
-            box_coords = self.__to_image_coords(boxes, height, width)            
-            # Each class with be represented by a differently colored box
-            # Draw Box for Tuning            
-            self.__draw_boxes(image, box_coords, classes)            
-            plt.imshow(image)
-            plt.show()
+        confidence_cutoff = 0.7    # was 0.8
+        # Filter boxes with a confidence score less than `confidence_cutoff`
+        boxes, scores, classes = self.__filter_boxes(confidence_cutoff, boxes, scores, classes)
+        # The current box coordinates are normalized to a range between 0 and 1.
+        # This converts the coordinates actual location on the image.
+        width, height = image.size
+        box_coords = self.__to_image_coords(boxes, height, width)            
+        # Each class with be represented by a differently colored box
+        # Draw Box for Tuning            
+        self.__draw_boxes(image, box_coords, classes)            
+        plt.imshow(image)
+        plt.show()
             
-            light_state = 4
-            if len(classes)>0:
-                light_state = self.__classifier(cv2_img, box_coords, classes)
-                
-        print("light_state",light_state)
+        light_state = 4
+        if len(classes)>0:
+            light_state = self.__classifier(cv2_img, box_coords, classes)                
+        
         return light_state
     
     def __filter_boxes(self, min_score, boxes, scores, classes):
@@ -149,8 +149,10 @@ class TLClassifier(object):
         GREEN=2  YELLOW=1  RED=0 
         '''
         if (avg > 3.0):
-            return 0
-        else:
+            print("RED")
+            return 0            
+        else:            
+            print("Not RED")
             return 4
                      
     '''
@@ -163,11 +165,6 @@ class TLClassifier(object):
         masked_red = self.__mask_red(test_image_hsv, rgb_image)   
         Masked_R_V = self.__Masked_Image_Brightness(masked_red)  
         AVG_Masked_R = self.__AVG_Brightness(Masked_R_V)    
-        plt.imshow(masked_red)
-        plt.show()
-        plt.imshow(Masked_R_V, cmap='gray') 
-        plt.show()
-        print("brightness avg value: %d" %AVG_Masked_R)
         return AVG_Masked_R
     
     def __mask_red(self, HSV_image, rgb_image):    
