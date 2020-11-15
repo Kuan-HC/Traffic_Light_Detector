@@ -67,10 +67,7 @@ class TLClassifier(object):
             scores = np.squeeze(scores)
             classes = np.squeeze(classes)
             
-            '''
-            Below if for debugging
-            '''            
-            confidence_cutoff = 0.6
+            confidence_cutoff = 0.7    # was 0.8
             # Filter boxes with a confidence score less than `confidence_cutoff`
             boxes, scores, classes = self.__filter_boxes(confidence_cutoff, boxes, scores, classes)
             # The current box coordinates are normalized to a range between 0 and 1.
@@ -78,13 +75,12 @@ class TLClassifier(object):
             width, height = image.size
             box_coords = self.__to_image_coords(boxes, height, width)            
             # Each class with be represented by a differently colored box
-            # For Tuning            
+            # Draw Box for Tuning            
             self.__draw_boxes(image, box_coords, classes)            
             #plt.imshow(cv2_img)
             print("switch to TrafficLight.UNKNOWN in ROS")
             light_state = 4
             if len(classes)>0:
-                print("classifier")
                 light_state = self.__classifier(cv2_img, box_coords, classes)
  
         #return TrafficLight.UNKNOWN
@@ -116,7 +112,7 @@ class TLClassifier(object):
         box_coords[:, 2] = boxes[:, 2] * height
         box_coords[:, 3] = boxes[:, 3] * width
     
-        return box_coords                 
+        return box_coords
 
     def __draw_boxes(self, image, boxes, classes, thickness=4):
         """Draw bounding boxes on the image"""
@@ -150,9 +146,8 @@ class TLClassifier(object):
     '''
     Traffic Light classifier - reuse project from intro-to-self-driving-cars
     '''
-    def __estimate_label(self, image):
-        #rgb_image = np.array(pil_image)      
-        rgb_image = cv2.resize(image,(32,32))
+    def __estimate_label(self, rgb_image):  
+        rgb_image = cv2.resize(rgb_image,(32,32))
         test_image_hsv = cv2.cvtColor(np.array(rgb_image), cv2.COLOR_RGB2HSV)
         # Mask HSV channel
         masked_red = self.__mask_red(test_image_hsv, rgb_image)
