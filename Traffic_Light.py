@@ -136,12 +136,18 @@ class TLClassifier(object):
                 '''
                 Traffic Light classifier - project from intro to self driving cars
                 '''  
-                predict_sum += self.__estimate_label(crop_image)                
-        
-        print("counter: ", traffic_counter)
-        avg = predict_sum/traffic_counter
-        print("This groupb brightness value: ",avg)
-        
+                predict_sum += self.__estimate_label(crop_image)    
+        # traffic_counter ==0 means there is no object detect as traffic            
+        if (traffic_counter !=0):
+            avg = predict_sum/traffic_counter
+            print("This groupb brightness value: ",avg)
+        else:
+            avg = 0        
+
+        '''
+        Traffic light definition in UNKNOWN=4
+        GREEN=2  YELLOW=1  RED=0 
+        '''
         if (avg > 3.0):
             return 0
         else:
@@ -163,7 +169,7 @@ class TLClassifier(object):
         plt.show()
         print("brightness avg value: %d" %AVG_Masked_R)
         return AVG_Masked_R
- 
+    
     def __mask_red(self, HSV_image, rgb_image):    
         #red_mask_1 = cv2.inRange(HSV_image, (0,50,60), (10,255,255))
         red_mask = cv2.inRange(HSV_image, (140,10,100), (180,255,255)) #was (140,36,100)
