@@ -19,5 +19,6 @@ Udacity-CarND-Capstone.
 * main.ipynb
 
 ## Output
-<img src="img/predict_1.jpg" width = "300"/>  <img src="img/predict_2.jpg" width = "300"/> 
+<img src="img/predict_1.JPG" width = "350"/>  
+<img src="img/predict_2.JPG" width = "310"/> 
 
